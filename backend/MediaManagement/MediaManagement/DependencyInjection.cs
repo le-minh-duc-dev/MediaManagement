@@ -1,5 +1,6 @@
 ﻿using MediaManagement.Database;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace MediaManagement;
 
@@ -12,6 +13,15 @@ public static class DependencyInjection
     )
     {
         services.AddDatabase(configuration, environment);
+        services.AddSerilog(
+            (services, loggerConfiguration) =>
+            {
+                loggerConfiguration
+                    .ReadFrom.Configuration(configuration)
+                    .ReadFrom.Services(services);
+            }
+        );
+
         return services;
     }
 
