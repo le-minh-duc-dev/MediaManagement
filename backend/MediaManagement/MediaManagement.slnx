@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="MediaManagement.IntegrationTests/MediaManagement.IntegrationTests.csproj" />
+  <Project Path="MediaManagement.UnitTests/MediaManagement.UnitTests.csproj" />
+  <Project Path="MediaManagement/MediaManagement.csproj" />
+</Solution>
