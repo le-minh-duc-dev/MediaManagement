@@ -1,13 +1,25 @@
 ﻿using System.Threading.RateLimiting;
+using Amazon;
+using Amazon.S3;
 using Asp.Versioning;
+using FluentValidation;
+using MediaManagement.Api;
+using MediaManagement.Api.Validation;
+using MediaManagement.BackgroundWorkers;
 using MediaManagement.Database;
 using MediaManagement.Implementation;
 using MediaManagement.Implementation.Repositories;
+using MediaManagement.Implementation.Services;
+using MediaManagement.Implementation.Services.ApiServices;
 using MediaManagement.Interfaces;
 using MediaManagement.Interfaces.Repositories;
+using MediaManagement.Interfaces.Services;
 using MediaManagement.Middlewares;
+using MediaManagement.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace MediaManagement;
@@ -30,23 +42,28 @@ public static class DependencyInjection
 
     public static WebApplication RegisterMiddlewares(this WebApplication app)
     {
+        app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseExceptionHandler();
+        app.UseStatusCodePages(context =>
+            ApiProblems.WriteAsync(
+                context.HttpContext,
+                context.HttpContext.Response.StatusCode,
+                context.HttpContext.RequestAborted
+            )
+        );
+
         if (app.Environment.IsDevelopment())
         {
-            app.UseDeveloperExceptionPage();
             app.MapOpenApi();
         }
         else
         {
-            // This middleware should go first in the pipeline to catch exceptions from other middlewares
-            app.UseExceptionHandler("/error");
             app.UseHsts();
         }
 
         // this middleware should go before routing to ensure that all requests are redirected to HTTPS, and be not limited to Production environment only,
         // as it is a security best practice to enforce HTTPS in all environments.
         app.UseHttpsRedirection();
-
-        app.UseMiddleware<CorrelationIdMiddleware>();
 
         app.UseRouting();
 
@@ -72,6 +89,30 @@ public static class DependencyInjection
         IWebHostEnvironment environment
     )
     {
+        services.AddScoped<ValidationActionFilter>();
+        services
+            .AddControllers(options => options.Filters.AddService<ValidationActionFilter>())
+            .ConfigureApiBehaviorOptions(options =>
+            {
+                options.InvalidModelStateResponseFactory = InvalidRequestResponse.Create;
+                // Empty MVC error responses are formatted by the shared status-code handler.
+                options.SuppressMapClientErrors = true;
+            });
+        services.AddProblemDetails(options =>
+            options.CustomizeProblemDetails = context =>
+                ApiProblems.Customize(context.HttpContext, context.ProblemDetails)
+        );
+        services.AddExceptionHandler<ApiExceptionHandler>();
+        services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.Authority = configuration["Authentication:Authority"];
+                options.Audience = configuration["Authentication:Audience"];
+                options.MapInboundClaims = false;
+            });
+        services.AddAuthorization();
+
         services
             .AddApiVersioning(options =>
             {
@@ -111,8 +152,9 @@ public static class DependencyInjection
                         .ToString();
                 }
 
-                await context.HttpContext.Response.WriteAsJsonAsync(
-                    new { error = "rate_limit_exceeded" },
+                await ApiProblems.WriteAsync(
+                    context.HttpContext,
+                    StatusCodes.Status429TooManyRequests,
                     ct
                 );
             };
@@ -148,7 +190,14 @@ public static class DependencyInjection
         IWebHostEnvironment environment
     )
     {
+        services.AddHttpContextAccessor();
         services.AddScoped<ICorrelationIdAccessor, CorrelationIdAccessor>();
+        services.AddValidatorsFromAssemblyContaining<Program>(ServiceLifetime.Scoped);
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddScoped<IUploadSessionService, UploadSessionService>();
+        services.AddScoped<IPostService, PostService>();
+        services.AddScoped<UploadCleanupService>();
         return services;
     }
 
@@ -185,6 +234,48 @@ public static class DependencyInjection
         );
 
         services.AddScoped<IUploadSessionRepository, UploadSessionRepository>();
+        services.AddScoped<IPostRepository, PostRepository>();
+
+        services
+            .AddOptions<UploadOptions>()
+            .Bind(configuration.GetSection(UploadOptions.SectionName))
+            .Validate(x => !string.IsNullOrWhiteSpace(x.Region), "Uploads:Region is required.")
+            .Validate(
+                x =>
+                    x.MaxItems is > 0 and <= 100
+                    && x.MaxFileSizeBytes is > 0 and <= 5L * 1024 * 1024 * 1024,
+                "Upload limits must allow 1-100 items and files up to 5 GiB."
+            )
+            .Validate(
+                x =>
+                    x.AllowedContentTypes is { Length: > 0 }
+                    && x.AllowedContentTypes.All(t => !string.IsNullOrWhiteSpace(t)),
+                "At least one allowed content type is required."
+            )
+            .Validate(
+                x =>
+                    x.UrlLifetimeMinutes > 0
+                    && x.UrlLifetimeMinutes <= x.SessionLifetimeMinutes
+                    && x.SessionLifetimeMinutes < x.CleanupAfterHours * 60
+                    && x.CleanupAfterHours is > 0 and < 24
+                    && x.CleanupIntervalMinutes > 0
+                    && x.CleanupAfterHours * 60 + x.CleanupIntervalMinutes < 24 * 60
+                    && x.CleanupBatchSize is > 0 and <= 1000,
+                "Upload expiry and cleanup settings are invalid."
+            );
+
+        services.AddSingleton(provider =>
+        {
+            UploadOptions options = provider.GetRequiredService<IOptions<UploadOptions>>().Value;
+            return string.IsNullOrWhiteSpace(options.BucketName)
+                ? throw new InvalidOperationException(
+                    "Configure Uploads:BucketName before using uploads."
+                )
+                : (IAmazonS3)new AmazonS3Client(RegionEndpoint.GetBySystemName(options.Region));
+        });
+
+        services.AddScoped<IUploadStorage, S3UploadStorage>();
+        services.AddHostedService<UploadCleanupWorker>();
 
         return services;
     }

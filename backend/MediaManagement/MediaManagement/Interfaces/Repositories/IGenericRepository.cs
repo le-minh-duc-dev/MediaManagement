@@ -25,4 +25,7 @@ public interface IGenericRepository<T>
     void RemoveRange(ICollection<T> entities);
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    // Returns false on a concurrency conflict and discards tracked changes before a fresh read.
+    Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default);
 }

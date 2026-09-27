@@ -10,7 +10,7 @@ public class MediaAsset
     public required string ContentType { get; set; }
     public long SizeBytes { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UploadedAt { get; set; }
 
     public UploadSession? UploadSession { get; set; }
 }
-

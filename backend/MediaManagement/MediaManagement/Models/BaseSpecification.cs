@@ -6,36 +6,33 @@ namespace MediaManagement.Models;
 // GENERIC SPECIFICATION IMPLEMENTATION (BASE CLASS)
 // https://github.com/dotnet-architecture/eShopOnWeb
 
-public class BaseSpecifcation<T> : ISpecification<T>
+public class SpecifcationBase<T>(
+    Expression<Func<T, bool>>? criteria = default,
+    int? take = default,
+    int? skip = default
+) : ISpecification<T>
 {
     private const int DefaultTake = 20;
     private const int DefaultSkip = 0;
 
-    public BaseSpecifcation()
-        : this(null, null, null) { }
-
-    public BaseSpecifcation(int? take, int? skip)
-        : this(null, take, skip) { }
-
-    public BaseSpecifcation(Expression<Func<T, bool>>? criteria, int? take, int? skip)
-    {
-        Criteria = criteria;
-        Take = take ?? DefaultTake;
-        Skip = skip ?? DefaultSkip;
-    }
-
-    public Expression<Func<T, bool>>? Criteria { get; }
+    public Expression<Func<T, bool>>? Criteria { get; } = criteria;
     public List<Expression<Func<T, object>>> Includes { get; } = [];
     public Expression<Func<T, object>>? OrderBy { get; private set; }
     public Expression<Func<T, object>>? OrderByDescending { get; private set; }
 
-    public int? Take { get; }
+    public int? Take { get; } = take ?? DefaultTake;
 
-    public int? Skip { get; }
+    public int? Skip { get; } = skip ?? DefaultSkip;
 
     protected void AddInclude(Expression<Func<T, object>> includeExpression)
     {
         Includes.Add(includeExpression);
+    }
+
+    public SpecifcationBase<T> Include(Expression<Func<T, object>> includeExpression)
+    {
+        Includes.Add(includeExpression);
+        return this;
     }
 
     protected void AddOrderBy(Expression<Func<T, object>> orderByExpression)

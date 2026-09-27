@@ -1,27 +1,15 @@
 using MediaManagement;
-using Serilog;
 
-Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-try
-{
-    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddServices(builder.Configuration, builder.Environment);
 
-    builder.Services.AddServices(builder.Configuration, builder.Environment);
+WebApplication app = builder.Build();
 
-    WebApplication app = builder.Build();
+app.RegisterMiddlewares();
 
-    app.RegisterMiddlewares();
+app.MapGet("/", () => "Hello World!");
 
-    app.MapGet("/", () => "Hello World!");
+app.Run();
 
-    app.Run();
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Application terminated unexpectedly");
-}
-finally
-{
-    Log.CloseAndFlush();
-}
+public partial class Program { }

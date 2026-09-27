@@ -73,6 +73,12 @@ public abstract class GenericRepository<T>(MediaManagementContext context) : IGe
         {
             query = query.AsNoTracking();
         }
+
+        if (specification != null)
+        {
+            query = GetQuery(query, specification);
+        }
+
         return await query.FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -89,6 +95,20 @@ public abstract class GenericRepository<T>(MediaManagementContext context) : IGe
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            _context.ChangeTracker.Clear();
+            return false;
+        }
     }
 
     public static IQueryable<T> GetQuery(IQueryable<T> inputQuery, ISpecification<T> spec)
