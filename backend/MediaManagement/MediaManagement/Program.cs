@@ -5,11 +5,13 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
 try
 {
-    var builder = WebApplication.CreateBuilder(args);
+    WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
     builder.Services.AddServices(builder.Configuration, builder.Environment);
 
-    var app = builder.Build();
+    WebApplication app = builder.Build();
+
+    app.RegisterMiddlewares();
 
     app.MapGet("/", () => "Hello World!");
 
