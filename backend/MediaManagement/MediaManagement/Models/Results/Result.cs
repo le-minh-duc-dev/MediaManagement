@@ -5,7 +5,7 @@ public class Result
     public bool IsSuccess => ErrorType is null;
     public bool IsFailure => !IsSuccess;
     public ErrorType? ErrorType { get; }
-    public IReadOnlyList<Error> Errors { get; }
+    public IReadOnlyCollection<Error> Errors { get; }
 
     private protected Result(ErrorType? errorType, IEnumerable<Error> errors)
     {
@@ -16,10 +16,11 @@ public class Result
             throw new ArgumentOutOfRangeException(nameof(errorType));
         }
 
-        if (
-            copy.Any(error => error is null)
-            || (errorType is null ? copy.Length != 0 : copy.Length == 0)
-        )
+        var hasNullError = copy.Any(static error => error is null);
+        var invalidSuccess = errorType is null && copy.Length > 0;
+        var invalidFailure = errorType is not null && copy.Length == 0;
+
+        if (hasNullError || invalidSuccess || invalidFailure)
         {
             throw new ArgumentException(
                 "Success must have no errors; failure must have at least one non-null error.",
@@ -47,10 +48,20 @@ public sealed class Result<T> : Result
     private Result(T? value, ErrorType? errorType, IEnumerable<Error> errors)
         : base(errorType, errors)
     {
+        if (IsSuccess && value is null)
+        {
+            throw new ArgumentNullException(
+                nameof(value),
+                "A successful result must have a non-null value."
+            );
+        }
         this.value = value;
     }
 
-    public static Result<T> Success(T value) => new(value, null, []);
+    public static Result<T> Success(T value)
+    {
+        return new(value, null, []);
+    }
 
     public static new Result<T> Failure(ErrorType errorType, params Error[] errors) =>
         new(default, errorType, errors);

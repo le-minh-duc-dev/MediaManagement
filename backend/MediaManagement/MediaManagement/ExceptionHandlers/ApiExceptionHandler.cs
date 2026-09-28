@@ -1,6 +1,7 @@
+using MediaManagement.Contracts;
 using Microsoft.AspNetCore.Diagnostics;
 
-namespace MediaManagement.Api;
+namespace MediaManagement.ExceptionHandlers;
 
 public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {

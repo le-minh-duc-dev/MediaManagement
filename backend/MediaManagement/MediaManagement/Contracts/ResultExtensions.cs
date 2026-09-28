@@ -1,7 +1,7 @@
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MediaManagement.Api;
+namespace MediaManagement.Contracts;
 
 public static class ResultExtensions
 {

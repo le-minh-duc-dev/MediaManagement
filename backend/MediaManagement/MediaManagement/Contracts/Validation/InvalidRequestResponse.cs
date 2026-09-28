@@ -1,11 +1,13 @@
 using System.Text.Json;
+using MediaManagement.Api.Validation;
+using MediaManagement.Contracts;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
 
-namespace MediaManagement.Api.Validation;
+namespace MediaManagement.Contracts.Validation;
 
 public static class InvalidRequestResponse
 {

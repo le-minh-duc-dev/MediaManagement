@@ -1,6 +1,6 @@
 using FluentValidation.Results;
-using MediaManagement.Api;
-using MediaManagement.Api.Validation;
+using MediaManagement.Contracts;
+using MediaManagement.Contracts.Validation;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

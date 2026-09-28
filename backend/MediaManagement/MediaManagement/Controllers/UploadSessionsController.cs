@@ -1,5 +1,5 @@
 using Asp.Versioning;
-using MediaManagement.Api;
+using MediaManagement.Contracts;
 using MediaManagement.Contracts.Uploads;
 using MediaManagement.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;

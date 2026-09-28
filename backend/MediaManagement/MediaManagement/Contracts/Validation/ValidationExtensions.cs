@@ -2,7 +2,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using MediaManagement.Models.Results;
 
-namespace MediaManagement.Api.Validation;
+namespace MediaManagement.Contracts.Validation;
 
 public static class ValidationExtensions
 {

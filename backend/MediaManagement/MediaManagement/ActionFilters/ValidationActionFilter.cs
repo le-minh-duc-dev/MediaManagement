@@ -1,5 +1,8 @@
 using FluentValidation;
 using FluentValidation.Results;
+using MediaManagement.Api.Validation;
+using MediaManagement.Contracts;
+using MediaManagement.Contracts.Validation;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -7,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
 
-namespace MediaManagement.Api.Validation;
+namespace MediaManagement.ActionFilters;
 
 public sealed class ValidationActionFilter(IOptions<JsonOptions> jsonOptions) : IAsyncActionFilter
 {
