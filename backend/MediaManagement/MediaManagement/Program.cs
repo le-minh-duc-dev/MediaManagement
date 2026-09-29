@@ -1,4 +1,4 @@
-using MediaManagement;
+using MediaManagement.Boostrap;
 using MediaManagement.Database;
 
 var builder = WebApplication.CreateBuilder(args);
