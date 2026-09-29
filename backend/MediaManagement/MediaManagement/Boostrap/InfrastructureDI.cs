@@ -21,6 +21,22 @@ public static class InfrastructureDI
         IWebHostEnvironment environment
     )
     {
+        services.AddDatabase(configuration, environment);
+        services.AddLogging(configuration);
+        services.AddRepositories();
+        services.AddOptions(configuration);
+        services.AddInfrastructureServices();
+        services.AddWorkers();
+
+        return services;
+    }
+
+    private static IServiceCollection AddDatabase(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IWebHostEnvironment environment
+    )
+    {
         var connectionString =
             configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException(
@@ -38,18 +54,39 @@ public static class InfrastructureDI
             }
         });
 
+        return services;
+    }
+
+    private static IServiceCollection AddLogging(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
+    {
         services.AddSerilog(
-            (services, loggerConfiguration) =>
+            (serviceProvider, loggerConfiguration) =>
             {
                 loggerConfiguration
                     .ReadFrom.Configuration(configuration)
-                    .ReadFrom.Services(services);
+                    .ReadFrom.Services(serviceProvider);
             }
         );
 
+        return services;
+    }
+
+    private static IServiceCollection AddRepositories(this IServiceCollection services)
+    {
         services.AddScoped<IUploadSessionRepository, UploadSessionRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
 
+        return services;
+    }
+
+    private static IServiceCollection AddOptions(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
+    {
         services
             .AddOptions<UploadOptions>()
             .Bind(configuration.GetSection(UploadOptions.SectionName))
@@ -78,6 +115,11 @@ public static class InfrastructureDI
                 "Upload expiry and cleanup settings are invalid."
             );
 
+        return services;
+    }
+
+    private static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+    {
         services.AddSingleton(provider =>
         {
             var options = provider.GetRequiredService<IOptions<UploadOptions>>().Value;
@@ -89,6 +131,12 @@ public static class InfrastructureDI
         });
 
         services.AddScoped<IUploadStorage, S3UploadStorage>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddWorkers(this IServiceCollection services)
+    {
         services.AddHostedService<UploadCleanupWorker>();
 
         return services;
