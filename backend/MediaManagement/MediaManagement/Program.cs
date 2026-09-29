@@ -1,10 +1,13 @@
 using MediaManagement;
+using MediaManagement.Database;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddServices(builder.Configuration, builder.Environment);
 
-WebApplication app = builder.Build();
+var app = builder.Build();
+
+await Migrator.RunMigrationAsync(app);
 
 app.RegisterMiddlewares();
 

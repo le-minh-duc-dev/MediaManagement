@@ -19,6 +19,7 @@ using MediaManagement.Interfaces.Services;
 using MediaManagement.Middlewares;
 using MediaManagement.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -57,6 +58,10 @@ public static class DependencyInjection
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/openapi/v1.json", "v1");
+            });
         }
         else
         {
@@ -81,6 +86,8 @@ public static class DependencyInjection
         app.UseAuthorization();
 
         app.MapControllers();
+
+        app.MapIdentityApi<IdentityUser>();
 
         return app;
     }
@@ -116,6 +123,10 @@ public static class DependencyInjection
         services.AddAuthorization();
 
         services
+            .AddIdentityApiEndpoints<IdentityUser>()
+            .AddEntityFrameworkStores<MediaManagementContext>();
+
+        services
             .AddApiVersioning(options =>
             {
                 options.ApiVersionReader = new UrlSegmentApiVersionReader();
@@ -146,7 +157,7 @@ public static class DependencyInjection
 
             options.OnRejected = async (context, ct) =>
             {
-                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
                 {
                     context.HttpContext.Response.Headers.RetryAfter = Math.Ceiling(
                             retryAfter.TotalSeconds
@@ -209,7 +220,7 @@ public static class DependencyInjection
         IWebHostEnvironment environment
     )
     {
-        string connectionString =
+        var connectionString =
             configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException(
                 "Connection string 'DefaultConnection' not found."
@@ -268,7 +279,7 @@ public static class DependencyInjection
 
         services.AddSingleton(provider =>
         {
-            UploadOptions options = provider.GetRequiredService<IOptions<UploadOptions>>().Value;
+            var options = provider.GetRequiredService<IOptions<UploadOptions>>().Value;
             return string.IsNullOrWhiteSpace(options.BucketName)
                 ? throw new InvalidOperationException(
                     "Configure Uploads:BucketName before using uploads."
