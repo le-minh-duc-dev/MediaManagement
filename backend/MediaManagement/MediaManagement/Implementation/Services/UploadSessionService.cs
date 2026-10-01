@@ -22,13 +22,13 @@ public sealed class UploadSessionService(
         CancellationToken cancellationToken
     )
     {
-        Guid ownerId = CurrentUser.GetRequiredUserId();
+        var createdBy = CurrentUser.GetRequiredUserId();
 
-        DateTimeOffset now = clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         UploadSession session = new()
         {
             Id = CreateNewGuid(),
-            OwnerId = ownerId,
+            CreatedBy = createdBy,
             CreatedAt = now,
             ExpiresAt = now.AddMinutes(options.Value.SessionLifetimeMinutes),
             NextCleanupAt = now.AddHours(options.Value.CleanupAfterHours),
@@ -36,14 +36,14 @@ public sealed class UploadSessionService(
             Status = UploadSessionStatus.Pending,
             ExpectedSizeBytes = request.Items.Sum(x => x.SizeBytes),
         };
-        foreach (UploadItemRequest item in request.Items)
+        foreach (var item in request.Items)
         {
-            Guid id = CreateNewGuid();
+            var id = CreateNewGuid();
             session.MediaAssets.Add(
                 new MediaAsset
                 {
                     Id = id,
-                    OwnerId = ownerId,
+                    CreatedBy = createdBy,
                     UploadSessionId = session.Id,
                     ObjectKey = CreateObjectKey(session.Id, id),
                     FileName = item.FileName,
@@ -58,10 +58,10 @@ public sealed class UploadSessionService(
         await repository.SaveChangesAsync(cancellationToken);
 
         List<UploadTarget> targets = [];
-        DateTimeOffset urlExpiresAt = now.AddMinutes(options.Value.UrlLifetimeMinutes);
-        foreach (MediaAsset asset in session.MediaAssets)
+        var urlExpiresAt = now.AddMinutes(options.Value.UrlLifetimeMinutes);
+        foreach (var asset in session.MediaAssets)
         {
-            SignedUpload signed = await storage.CreateUploadUrlAsync(
+            var signed = await storage.CreateUploadUrlAsync(
                 asset.ObjectKey,
                 asset.ContentType,
                 urlExpiresAt,
@@ -89,8 +89,8 @@ public sealed class UploadSessionService(
         CancellationToken cancellationToken
     )
     {
-        Guid ownerId = CurrentUser.GetRequiredUserId();
-        UploadSession? session = await GetSessionForOwnerAsync(ownerId, id, cancellationToken);
+        var createdBy = CurrentUser.GetRequiredUserId();
+        var session = await GetSessionForOwnerAsync(createdBy, id, cancellationToken);
         return session is null
             ? Result<UploadSessionDetails>.Failure(
                 ErrorType.NotFound,
@@ -105,9 +105,9 @@ public sealed class UploadSessionService(
         CancellationToken cancellationToken
     )
     {
-        Guid ownerId = CurrentUser.GetRequiredUserId();
+        var createdBy = CurrentUser.GetRequiredUserId();
 
-        UploadSession? session = await GetSessionForOwnerAsync(ownerId, id, cancellationToken);
+        var session = await GetSessionForOwnerAsync(createdBy, id, cancellationToken);
 
         if (session is null)
         {
@@ -144,12 +144,9 @@ public sealed class UploadSessionService(
             );
         }
 
-        foreach (MediaAsset? asset in session.MediaAssets.Where(x => ids.Contains(x.Id)))
+        foreach (var asset in session.MediaAssets.Where(x => ids.Contains(x.Id)))
         {
-            StoredUpload? metadata = await storage.GetMetadataAsync(
-                asset.ObjectKey,
-                cancellationToken
-            );
+            var metadata = await storage.GetMetadataAsync(asset.ObjectKey, cancellationToken);
             if (metadata is null)
             {
                 return Conflict(BusinessErrorCodes.NotFound);
@@ -167,13 +164,13 @@ public sealed class UploadSessionService(
                 return Conflict(BusinessErrorCodes.UploadSession.ObjectMetadataMismatch);
             }
         }
-        DateTimeOffset now = clock.GetUtcNow();
+        var now = clock.GetUtcNow();
         if (session.ExpiresAt <= now)
         {
             return Conflict(BusinessErrorCodes.UploadSession.StatusExpired);
         }
 
-        foreach (MediaAsset? asset in session.MediaAssets.Where(x => ids.Contains(x.Id)))
+        foreach (var asset in session.MediaAssets.Where(x => ids.Contains(x.Id)))
         {
             asset.UploadedAt = now;
         }
@@ -183,7 +180,7 @@ public sealed class UploadSessionService(
         session.Revision = CreateNewGuid();
         if (!await repository.TrySaveChangesAsync(cancellationToken))
         {
-            UploadSession? current = await GetSessionForOwnerAsync(ownerId, id, cancellationToken);
+            var current = await GetSessionForOwnerAsync(createdBy, id, cancellationToken);
             return
                 current is not null
                 && current.Status is UploadSessionStatus.Completed or UploadSessionStatus.Failed
@@ -219,15 +216,14 @@ public sealed class UploadSessionService(
         );
 
     private Task<UploadSession?> GetSessionForOwnerAsync(
-        Guid ownerId,
+        Guid createdBy,
         Guid sessionId,
         CancellationToken cancellationToken
     )
     {
-        SpecifcationBase<UploadSession> specification = new SpecifcationBase<UploadSession>(
-            x => x.OwnerId == ownerId
-        )
-            .Include(x => x.MediaAssets);
+        var specification = new SpecifcationBase<UploadSession>(x =>
+            x.CreatedBy == createdBy
+        ).Include(x => x.MediaAssets);
         return repository.GetByIdAsync(
             sessionId,
             specification,

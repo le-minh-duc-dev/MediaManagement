@@ -22,7 +22,7 @@ public sealed class MediaManagementContext(DbContextOptions<MediaManagementConte
             .Entity<Post>()
             .HasIndex(x => new
             {
-                x.OwnerId,
+                x.CreatedBy,
                 x.CreatedAt,
                 x.Id,
             });

@@ -27,7 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Database\Interceptors\" />
+    <Folder Include="Contracts\Validation\" />
     <Folder Include="Database\Repositories\" />
+    <Folder Include="Migrations\" />
   </ItemGroup>
 </Project>

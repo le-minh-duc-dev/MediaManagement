@@ -2,7 +2,6 @@
 using Asp.Versioning;
 using MediaManagement.ActionFilters;
 using MediaManagement.Contracts;
-using MediaManagement.Contracts.Validation;
 using MediaManagement.Database;
 using MediaManagement.ExceptionHandlers;
 using MediaManagement.Middlewares;
@@ -23,14 +22,8 @@ public static class ApiDI
     )
     {
         services.AddScoped<ValidationActionFilter>();
-        services
-            .AddControllers(options => options.Filters.AddService<ValidationActionFilter>())
-            .ConfigureApiBehaviorOptions(options =>
-            {
-                options.InvalidModelStateResponseFactory = InvalidRequestResponse.Create;
-                // Empty MVC error responses are formatted by the shared status-code handler.
-                options.SuppressMapClientErrors = true;
-            });
+        services.AddControllers(options => options.Filters.AddService<ValidationActionFilter>());
+
         services.AddProblemDetails(options =>
             options.CustomizeProblemDetails = context =>
                 ApiProblems.Customize(context.HttpContext, context.ProblemDetails)

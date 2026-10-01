@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\backend",
+    "\\backend\\MediaManagement",
+    "\\backend\\MediaManagement\\MediaManagement",
+    "\\backend\\MediaManagement\\MediaManagement\\Boostrap",
+    "\\backend\\MediaManagement\\MediaManagement\\Contracts",
+    "\\backend\\MediaManagement\\MediaManagement\\Database",
+    "\\backend\\MediaManagement\\MediaManagement\\Properties"
+  ],
+  "SelectedNode": "\\backend\\MediaManagement\\MediaManagement\\Boostrap\\InfrastructureDI.cs",
+  "PreviewInSolutionExplorer": false
+}

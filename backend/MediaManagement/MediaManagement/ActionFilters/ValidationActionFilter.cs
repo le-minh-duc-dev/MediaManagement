@@ -1,18 +1,12 @@
 using FluentValidation;
-using FluentValidation.Results;
-using MediaManagement.Api.Validation;
 using MediaManagement.Contracts;
-using MediaManagement.Contracts.Validation;
 using MediaManagement.Models.Results;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
 
 namespace MediaManagement.ActionFilters;
 
-public sealed class ValidationActionFilter(IOptions<JsonOptions> jsonOptions) : IAsyncActionFilter
+public sealed class ValidationActionFilter : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(
         ActionExecutingContext context,
@@ -20,38 +14,34 @@ public sealed class ValidationActionFilter(IOptions<JsonOptions> jsonOptions) : 
     )
     {
         List<Error> errors = [];
-        foreach (ParameterDescriptor parameter in context.ActionDescriptor.Parameters)
+        foreach (var parameter in context.ActionDescriptor.Parameters)
         {
             if (
                 parameter.BindingInfo?.BindingSource == BindingSource.Services
-                || !context.ActionArguments.TryGetValue(parameter.Name, out object? value)
+                || !context.ActionArguments.TryGetValue(parameter.Name, out var value)
                 || value is null
             )
             {
                 continue;
             }
 
-            Type validatorType = typeof(IValidator<>).MakeGenericType(parameter.ParameterType);
+            var validatorType = typeof(IValidator<>).MakeGenericType(parameter.ParameterType);
             foreach (
-                IValidator validator in context
+                var validator in context
                     .HttpContext.RequestServices.GetServices(validatorType)
                     .Cast<IValidator>()
             )
             {
-                ValidationResult result = await validator.ValidateAsync(
+                var result = await validator.ValidateAsync(
                     new ValidationContext<object>(value),
                     context.HttpContext.RequestAborted
                 );
+
                 errors.AddRange(
-                    result.Errors.Select(failure =>
-                        failure.ToError(
-                            JsonFieldPath.Convert(
-                                failure.PropertyName,
-                                parameter.ParameterType,
-                                jsonOptions.Value.JsonSerializerOptions
-                            )
-                        )
-                    )
+                    result.Errors.Select(failure => new Error(
+                        failure.ErrorMessage,
+                        failure.PropertyName
+                    ))
                 );
             }
         }

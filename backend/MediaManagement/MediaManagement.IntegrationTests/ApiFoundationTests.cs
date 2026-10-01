@@ -3,11 +3,9 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
 using Asp.Versioning;
 using FluentValidation;
 using MediaManagement.Contracts;
-using MediaManagement.Contracts.Validation;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -62,7 +60,7 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Validation_returns_localizable_errors_and_skips_service()
     {
-        int before = factory.Services.GetRequiredService<TestApplicationService>().Calls;
+        var before = factory.Services.GetRequiredService<TestApplicationService>().Calls;
         using var request = new HttpRequestMessage(HttpMethod.Post, "/foundation")
         {
             Content = JsonContent.Create(
@@ -123,7 +121,7 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
         string contentType
     )
     {
-        int before = factory.Services.GetRequiredService<TestApplicationService>().Calls;
+        var before = factory.Services.GetRequiredService<TestApplicationService>().Calls;
         var response = await client.PostAsync(
             "/foundation",
             new StringContent(json, Encoding.UTF8, contentType)
@@ -324,10 +322,11 @@ public sealed class TestApplicationService
 public sealed class FoundationController(TestApplicationService service) : ControllerBase
 {
     [HttpGet("{id:int}")]
-    public IActionResult Get(int id) => Result<TestResponse>.Success(new(id, "hello")).ToOk(this);
+    public ActionResult<TestResponse> Get(int id) =>
+        Result<TestResponse>.Success(new(id, "hello")).ToOk(this);
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateRequest request) =>
+    public async Task<ActionResult<TestResponse>> Create(CreateRequest request) =>
         (await service.CreateAsync(request)).ToCreatedAtAction(this, nameof(Get), new { id = 7 });
 
     [HttpDelete("{id:int}")]
@@ -378,12 +377,8 @@ public sealed class CreateRequestValidator : AbstractValidator<CreateRequest>
     public CreateRequestValidator()
     {
         RuleFor(x => x.Title).NotEmpty().WithErrorCode("validation.required");
-        RuleFor(x => x.Title)
-            .MaximumLength(10)
-            .WithErrorCode("validation.max_length")
-            .WithParameters(
-                new ErrorParameters(new Dictionary<string, object?> { ["maxLength"] = 10 })
-            );
+        RuleFor(x => x.Title).MaximumLength(10).WithErrorCode("validation.max_length");
+
         RuleFor(x => x.Title)
             .MustAsync(
                 async (title, cancellationToken) =>

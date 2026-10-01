@@ -16,29 +16,33 @@ namespace MediaManagement.Controllers;
 public sealed class PostsController(IPostService service) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> CreateOwnAsync(
+    public async Task<ActionResult<PostDetails>> CreateOwnAsync(
         SavePostRequest request,
         CancellationToken cancellationToken
     )
     {
         var result = await service.CreateOwnAsync(request, cancellationToken);
-        return result.IsSuccess
-            ? Created($"{Request.Path}/{result.Value.Id}", result.Value)
-            : result.ToOk(this);
+        return result.ToCreatedAtAction(
+            this,
+            nameof(GetOwnAsync),
+            $"{Request.Path}/{result.Value.Id}"
+        );
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPageOwnAsync(
+    public async Task<ActionResult<PostPage>> GetPageOwnAsync(
         [FromQuery] GetPostsRequest request,
         CancellationToken cancellationToken
     ) => (await service.GetPageOwnAsync(request, cancellationToken)).ToOk(this);
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetOwnAsync(Guid id, CancellationToken cancellationToken) =>
-        (await service.GetOwnAsync(id, cancellationToken)).ToOk(this);
+    public async Task<ActionResult<PostDetails>> GetOwnAsync(
+        Guid id,
+        CancellationToken cancellationToken
+    ) => (await service.GetOwnAsync(id, cancellationToken)).ToOk(this);
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateOwnAsync(
+    public async Task<ActionResult<PostDetails>> UpdateOwnAsync(
         Guid id,
         SavePostRequest request,
         CancellationToken cancellationToken

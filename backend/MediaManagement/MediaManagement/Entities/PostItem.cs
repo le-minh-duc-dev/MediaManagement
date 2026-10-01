@@ -1,6 +1,6 @@
 namespace MediaManagement.Entities;
 
-public class PostItem
+public class PostItem : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid PostId { get; set; }

@@ -1,6 +1,6 @@
 namespace MediaManagement.Entities;
 
-public class Tag
+public class Tag : AuditableEntity
 {
     public Guid Id { get; set; }
     public required string Name { get; set; }

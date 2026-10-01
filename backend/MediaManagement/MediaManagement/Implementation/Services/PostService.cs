@@ -126,7 +126,7 @@ public sealed class PostService(
             post = new Post
             {
                 Id = CreateNewGuid(),
-                OwnerId = ownerId,
+                CreatedBy = ownerId,
                 CreatedAt = clock.GetUtcNow(),
             };
 
@@ -177,7 +177,7 @@ public sealed class PostService(
 
         await repository.SaveChangesAsync(cancellationToken);
 
-        Post? postWithDetailsSource = await repository.GetByOwnerAsync(
+        var postWithDetailsSource = await repository.GetByOwnerAsync(
             ownerId,
             post.Id,
             true,

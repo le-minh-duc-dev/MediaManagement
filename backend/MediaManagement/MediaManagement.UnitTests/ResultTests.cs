@@ -1,6 +1,4 @@
-using FluentValidation.Results;
 using MediaManagement.Contracts;
-using MediaManagement.Contracts.Validation;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -56,8 +54,8 @@ public class ResultTests
         [
             plain.ToOk(controller),
             plain.ToNoContent(controller),
-            typed.ToOk(controller),
-            typed.ToCreatedAtAction(controller, "Get", new { id = 1 }),
+            typed.ToOk(controller).Result!,
+            typed.ToCreatedAtAction(controller, "Get", new { id = 1 }).Result!,
         ];
         foreach (var response in responses)
         {
@@ -77,10 +75,10 @@ public class ResultTests
         Assert.IsType<NoContentResult>(Result.Success().ToNoContent(controller));
         Assert.Equal(
             42,
-            Assert.IsType<OkObjectResult>(Result<int>.Success(42).ToOk(controller)).Value
+            Assert.IsType<OkObjectResult>(Result<int>.Success(42).ToOk(controller).Result).Value
         );
         var created = Assert.IsType<CreatedAtActionResult>(
-            Result<int>.Success(42).ToCreatedAtAction(controller, "Get", new { id = 42 })
+            Result<int>.Success(42).ToCreatedAtAction(controller, "Get", new { id = 42 }).Result
         );
         Assert.Equal("Get", created.ActionName);
         Assert.Equal(42, created.Value);
@@ -98,7 +96,7 @@ public class ResultTests
             ((IDictionary<string, object?>)parameters).Add("x", 1)
         );
         foreach (
-            object value in new object[]
+            var value in new object[]
             {
                 new { secret = "private" },
                 new[] { 1 },
@@ -106,29 +104,11 @@ public class ResultTests
                 double.PositiveInfinity,
             }
         )
+        {
             Assert.Throws<ArgumentException>(() =>
                 new ErrorParameters(new Dictionary<string, object?> { ["unsafe"] = value })
             );
-    }
-
-    [Fact]
-    public void Validation_uses_only_namespaced_codes_and_typed_explicit_parameters()
-    {
-        var failure = new ValidationFailure("Title", "PRIVATE INPUT", "PRIVATE INPUT")
-        {
-            ErrorCode = "NotEmptyValidator",
-            CustomState = new { secret = "PRIVATE INPUT" },
-        };
-        var error = failure.ToError("title");
-        Assert.Equal("validation.invalid", error.Code);
-        Assert.Empty(error.Parameters);
-        failure.ErrorCode = "post.title.required";
-        failure.CustomState = new ErrorParameters(
-            new Dictionary<string, object?> { ["maxLength"] = 100 }
-        );
-        error = failure.ToError("title");
-        Assert.Equal("post.title.required", error.Code);
-        Assert.Equal(100, error.Parameters["maxLength"]);
+        }
     }
 
     private sealed class TestController : ControllerBase { }

@@ -34,8 +34,15 @@ public class CustomPolicyTests
         {
             var structure = logEvent.Properties.TryGetValue("Entity", out var direct)
                 ? Assert.IsType<StructureValue>(direct)
-                : Assert.IsType<StructureValue>(Assert.Single(
-                    Assert.IsType<StructureValue>(logEvent.Properties["Envelope"]).Properties).Value);
+                : Assert.IsType<StructureValue>(
+                    Assert
+                        .Single(
+                            Assert
+                                .IsType<StructureValue>(logEvent.Properties["Envelope"])
+                                .Properties
+                        )
+                        .Value
+                );
 
             Assert.Equal(expectedFields.Order(), structure.Properties.Select(p => p.Name).Order());
             using var output = new StringWriter(CultureInfo.InvariantCulture);
@@ -45,40 +52,70 @@ public class CustomPolicyTests
             Assert.DoesNotContain("OwnerId", output.ToString());
         }
 
-        Assert.Equal("Upload", Assert.IsType<ScalarValue>(sink.Events[0].Properties["Operation"]).Value);
-        var id = Assert.IsType<StructureValue>(sink.Events[0].Properties["Entity"])
+        Assert.Equal(
+            "Upload",
+            Assert.IsType<ScalarValue>(sink.Events[0].Properties["Operation"]).Value
+        );
+        var id = Assert
+            .IsType<StructureValue>(sink.Events[0].Properties["Entity"])
             .Properties.Single(p => p.Name == "Id");
-        Assert.Equal(entity.GetType().GetProperty("Id")!.GetValue(entity), Assert.IsType<ScalarValue>(id.Value).Value);
+        Assert.Equal(
+            entity.GetType().GetProperty("Id")!.GetValue(entity),
+            Assert.IsType<ScalarValue>(id.Value).Value
+        );
     }
 
     private static (object Entity, string[] ExpectedFields) CreateEntity(string kind)
     {
         var session = new UploadSession
         {
-            Id = Guid.NewGuid(), OwnerId = OwnerId,
-            Status = UploadSessionStatus.Completed, ExpectedSizeBytes = 1024,
-            CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            Id = Guid.NewGuid(),
+            CreatedBy = OwnerId,
+            Status = UploadSessionStatus.Completed,
+            ExpectedSizeBytes = 1024,
+            CreatedAt = DateTimeOffset.UtcNow,
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
         };
         var asset = new MediaAsset
         {
-            Id = Guid.NewGuid(), OwnerId = OwnerId, UploadSessionId = session.Id,
-            FileName = PrivateContent, ObjectKey = PrivateContent,
-            ContentType = "image/png", SizeBytes = 1024, UploadSession = session,
+            Id = Guid.NewGuid(),
+            CreatedBy = OwnerId,
+            UploadSessionId = session.Id,
+            FileName = PrivateContent,
+            ObjectKey = PrivateContent,
+            ContentType = "image/png",
+            SizeBytes = 1024,
+            UploadSession = session,
         };
         session.MediaAssets.Add(asset);
-        var post = new Post { Id = Guid.NewGuid(), OwnerId = OwnerId, Caption = PrivateContent };
+        var post = new Post
+        {
+            Id = Guid.NewGuid(),
+            CreatedBy = OwnerId,
+            Caption = PrivateContent,
+        };
         var item = new PostItem
         {
-            Id = Guid.NewGuid(), PostId = post.Id, MediaAssetId = asset.Id,
-            AltText = PrivateContent, Post = post, MediaAsset = asset,
+            Id = Guid.NewGuid(),
+            PostId = post.Id,
+            MediaAssetId = asset.Id,
+            AltText = PrivateContent,
+            Post = post,
+            MediaAsset = asset,
         };
         post.Items.Add(item);
         post.Tags.Add(new Tag { Id = Guid.NewGuid(), Name = PrivateContent });
 
         return kind switch
         {
-            "MediaAsset" => (asset, ["Id", "UploadSessionId", "ContentType", "SizeBytes", "CreatedAt"]),
-            "UploadSession" => (session, ["Id", "Status", "ExpectedSizeBytes", "CreatedAt", "ExpiresAt", "CompletedAt"]),
+            "MediaAsset" => (
+                asset,
+                ["Id", "UploadSessionId", "ContentType", "SizeBytes", "CreatedAt"]
+            ),
+            "UploadSession" => (
+                session,
+                ["Id", "Status", "ExpectedSizeBytes", "CreatedAt", "ExpiresAt", "CompletedAt"]
+            ),
             "Post" => (post, ["Id", "CreatedAt", "UpdatedAt"]),
             "PostItem" => (item, ["Id", "PostId", "MediaAssetId", "SortOrder"]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
@@ -90,13 +127,23 @@ public class CustomPolicyTests
     {
         var sink = new CapturingSink();
         using var logger = new LoggerConfiguration()
-            .Destructure.With<CustomPolicy>().WriteTo.Sink(sink).CreateLogger();
+            .Destructure.With<CustomPolicy>()
+            .WriteTo.Sink(sink)
+            .CreateLogger();
 
         logger.Information("Result {@Result}", new { Status = "Ready", Count = 3 });
 
-        var properties = Assert.IsType<StructureValue>(Assert.Single(sink.Events).Properties["Result"]).Properties;
-        Assert.Equal("Ready", Assert.IsType<ScalarValue>(properties.Single(p => p.Name == "Status").Value).Value);
-        Assert.Equal(3, Assert.IsType<ScalarValue>(properties.Single(p => p.Name == "Count").Value).Value);
+        var properties = Assert
+            .IsType<StructureValue>(Assert.Single(sink.Events).Properties["Result"])
+            .Properties;
+        Assert.Equal(
+            "Ready",
+            Assert.IsType<ScalarValue>(properties.Single(p => p.Name == "Status").Value).Value
+        );
+        Assert.Equal(
+            3,
+            Assert.IsType<ScalarValue>(properties.Single(p => p.Name == "Count").Value).Value
+        );
     }
 
     [Fact]
@@ -104,23 +151,33 @@ public class CustomPolicyTests
     {
         var sink = new CapturingSink();
         using var logger = new LoggerConfiguration()
-            .Destructure.With<CustomPolicy>().Destructure.ToMaximumStringLength(16)
-            .WriteTo.Sink(sink).CreateLogger();
-        logger.Information("Asset {@Asset}", new MediaAsset
-        {
-            FileName = PrivateContent, ObjectKey = PrivateContent,
-            ContentType = new string('x', 100),
-        });
+            .Destructure.With<CustomPolicy>()
+            .Destructure.ToMaximumStringLength(16)
+            .WriteTo.Sink(sink)
+            .CreateLogger();
+        logger.Information(
+            "Asset {@Asset}",
+            new MediaAsset
+            {
+                FileName = PrivateContent,
+                ObjectKey = PrivateContent,
+                ContentType = new string('x', 100),
+            }
+        );
 
-        var properties = Assert.IsType<StructureValue>(Assert.Single(sink.Events).Properties["Asset"]).Properties;
-        var contentType = Assert.IsType<string>(Assert.IsType<ScalarValue>(
-            properties.Single(p => p.Name == "ContentType").Value).Value);
+        var properties = Assert
+            .IsType<StructureValue>(Assert.Single(sink.Events).Properties["Asset"])
+            .Properties;
+        var contentType = Assert.IsType<string>(
+            Assert.IsType<ScalarValue>(properties.Single(p => p.Name == "ContentType").Value).Value
+        );
         Assert.True(contentType.Length <= 16);
     }
 
     private sealed class CapturingSink : ILogEventSink
     {
         public List<LogEvent> Events { get; } = [];
+
         public void Emit(LogEvent logEvent) => Events.Add(logEvent);
     }
 }

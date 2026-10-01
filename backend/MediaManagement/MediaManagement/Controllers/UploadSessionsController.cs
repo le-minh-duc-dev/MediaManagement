@@ -16,7 +16,7 @@ namespace MediaManagement.Controllers;
 public sealed class UploadSessionsController(IUploadSessionService service) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> CreateOwnAsync(
+    public async Task<ActionResult<CreatedUploadSession>> CreateOwnAsync(
         CreateUploadSessionRequest request,
         CancellationToken cancellationToken
     )
@@ -28,13 +28,16 @@ public sealed class UploadSessionsController(IUploadSessionService service) : Co
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetOwnAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<UploadSessionDetails>> GetOwnAsync(
+        Guid id,
+        CancellationToken cancellationToken
+    )
     {
         return (await service.GetOwnAsync(id, cancellationToken)).ToOk(this);
     }
 
     [HttpPost("{id:guid}/complete")]
-    public async Task<IActionResult> CompleteOwnAsync(
+    public async Task<ActionResult<UploadSessionDetails>> CompleteOwnAsync(
         Guid id,
         CompleteUploadSessionRequest request,
         CancellationToken cancellationToken

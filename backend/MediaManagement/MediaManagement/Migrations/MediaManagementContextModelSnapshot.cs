@@ -31,6 +31,9 @@ namespace MediaManagement.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -40,11 +43,14 @@ namespace MediaManagement.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("TEXT");
-
                     b.Property<long>("SizeBytes")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UploadSessionId")
                         .HasColumnType("TEXT");
@@ -74,15 +80,18 @@ namespace MediaManagement.Migrations
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("OwnerId")
+                    b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId", "CreatedAt", "Id");
+                    b.HasIndex("CreatedBy", "CreatedAt", "Id");
 
                     b.ToTable("Posts");
                 });
@@ -96,6 +105,12 @@ namespace MediaManagement.Migrations
                     b.Property<string>("AltText")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("MediaAssetId")
                         .HasColumnType("TEXT");
 
@@ -104,6 +119,12 @@ namespace MediaManagement.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -120,8 +141,20 @@ namespace MediaManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -144,6 +177,9 @@ namespace MediaManagement.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("ExpectedSizeBytes")
                         .HasColumnType("INTEGER");
 
@@ -153,15 +189,18 @@ namespace MediaManagement.Migrations
                     b.Property<long>("NextCleanupAt")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("Revision")
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
