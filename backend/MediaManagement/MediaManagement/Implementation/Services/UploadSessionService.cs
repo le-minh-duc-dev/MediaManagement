@@ -47,7 +47,7 @@ public sealed class UploadSessionService(
                     UploadSessionId = session.Id,
                     ObjectKey = CreateObjectKey(session.Id, id),
                     FileName = item.FileName,
-                    ContentType = item.ContentType.ToMimeType(),
+                    ContentType = item.ContentType,
                     SizeBytes = item.SizeBytes,
                     CreatedAt = now,
                 }
@@ -63,7 +63,7 @@ public sealed class UploadSessionService(
         {
             var signed = await storage.CreateUploadUrlAsync(
                 asset.ObjectKey,
-                asset.ContentType,
+                asset.ContentType.ToMimeType(),
                 urlExpiresAt,
                 cancellationToken
             );
@@ -72,7 +72,7 @@ public sealed class UploadSessionService(
                     asset.Id,
                     asset.FileName,
                     asset.SizeBytes,
-                    asset.ContentType.ToMediaContentType(),
+                    asset.ContentType,
                     signed.Url,
                     "PUT",
                     signed.Headers,
@@ -156,7 +156,7 @@ public sealed class UploadSessionService(
                 metadata.SizeBytes != asset.SizeBytes
                 || !string.Equals(
                     metadata.ContentType,
-                    asset.ContentType,
+                    asset.ContentType.ToMimeType(),
                     StringComparison.OrdinalIgnoreCase
                 )
             )
@@ -210,7 +210,7 @@ public sealed class UploadSessionService(
                         x.Id,
                         x.FileName,
                         x.SizeBytes,
-                        x.ContentType.ToMediaContentType(),
+                        x.ContentType,
                         x.UploadedAt is not null
                     )),
             ]

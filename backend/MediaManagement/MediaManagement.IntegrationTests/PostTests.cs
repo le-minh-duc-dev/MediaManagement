@@ -286,7 +286,7 @@ public sealed class PostTests : IAsyncLifetime
                         CreatedBy = assetOwner,
                         ObjectKey = id.ToString(),
                         FileName = "photo.jpg",
-                        ContentType = "image/jpeg",
+                        ContentType = MediaContentType.Jpeg,
                         SizeBytes = 10,
                         CreatedAt = factory.Clock.GetUtcNow(),
                         UploadedAt = uploaded ? factory.Clock.GetUtcNow() : null,

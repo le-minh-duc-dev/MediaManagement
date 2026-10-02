@@ -20,7 +20,7 @@ public sealed class CustomPolicy : IDestructuringPolicy
             {
                 asset.Id,
                 asset.UploadSessionId,
-                asset.ContentType,
+                ContentType = asset.ContentType.ToMimeType(),
                 asset.SizeBytes,
                 asset.CreatedAt,
             },

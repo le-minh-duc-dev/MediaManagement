@@ -229,7 +229,7 @@ public sealed class PostService(
     }
 
     private static MediaAssetDetails? Details(MediaAsset? asset, string downloadUrl) =>
-        asset is null ? null : new(asset.Id, asset.FileName, asset.ContentType.ToMediaContentType(), downloadUrl);
+        asset is null ? null : new(asset.Id, asset.FileName, asset.ContentType, downloadUrl);
 
     private static Result<PostDetails> Missing() =>
         Result<PostDetails>.Failure(

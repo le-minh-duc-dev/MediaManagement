@@ -1,3 +1,5 @@
+using MediaManagement.Entities;
+
 namespace MediaManagement.Contracts.Uploads;
 
 public sealed record CreateUploadSessionRequest(List<UploadItemRequest> Items);

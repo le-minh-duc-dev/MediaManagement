@@ -48,7 +48,7 @@ public sealed class MediaManagementContext(DbContextOptions<MediaManagementConte
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<MediaAsset>().HasIndex(x => x.ObjectKey).IsUnique();
         modelBuilder.Entity<MediaAsset>().Property(x => x.FileName).HasMaxLength(255);
-        modelBuilder.Entity<MediaAsset>().Property(x => x.ContentType).HasMaxLength(127);
+        modelBuilder.Entity<MediaAsset>().Property(x => x.ContentType);
         modelBuilder
             .Entity<PostItem>()
             .HasOne(x => x.MediaAsset)

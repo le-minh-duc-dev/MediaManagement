@@ -19,7 +19,7 @@ public sealed class MediaResolutionTests
         await db.GetService<IMigrator>().MigrateAsync("20261001150151_initApp");
 
         var session = new UploadSession { Id = Guid.NewGuid() };
-        MediaAsset CreateAsset(string contentType)
+        MediaAsset CreateAsset(MediaContentType contentType)
         {
             var asset = new MediaAsset
             {
@@ -32,7 +32,7 @@ public sealed class MediaResolutionTests
             return asset;
         }
 
-        var original = CreateAsset("image/jpeg");
+        var original = CreateAsset(MediaContentType.Jpeg);
         db.UploadSessions.Add(session);
         await db.SaveChangesAsync();
         await db.Database.MigrateAsync();
@@ -43,8 +43,8 @@ public sealed class MediaResolutionTests
             Id = Guid.NewGuid(),
             Resolutions =
             [
-                new() { Id = Guid.NewGuid(), MediaAsset = CreateAsset("image/jpeg") },
-                new() { Id = Guid.NewGuid(), MediaAsset = CreateAsset("image/jpeg") },
+                new() { Id = Guid.NewGuid(), MediaAsset = CreateAsset(MediaContentType.Jpeg) },
+                new() { Id = Guid.NewGuid(), MediaAsset = CreateAsset(MediaContentType.Jpeg) },
             ],
         };
 
@@ -54,8 +54,8 @@ public sealed class MediaResolutionTests
             Id = Guid.NewGuid(),
             Resolutions =
             [
-                new() { Id = Guid.NewGuid(), Width = 1920, Height = 1080, MediaAsset = CreateAsset("video/mp4") },
-                new() { Id = Guid.NewGuid(), Width = 1280, Height = 720, MediaAsset = CreateAsset("video/mp4") },
+                new() { Id = Guid.NewGuid(), Width = 1920, Height = 1080, MediaAsset = CreateAsset(MediaContentType.Mp4) },
+                new() { Id = Guid.NewGuid(), Width = 1280, Height = 720, MediaAsset = CreateAsset(MediaContentType.Mp4) },
             ],
             Thumbnail = CreateImage(),
         };
@@ -67,18 +67,18 @@ public sealed class MediaResolutionTests
         var savedImage = await db.Images.Include(x => x.Resolutions).ThenInclude(x => x.MediaAsset)
             .SingleAsync(x => x.Id == image.Id);
         Assert.Equal(image.Resolutions.Select(x => x.Id).Order(), savedImage.Resolutions.Select(x => x.Id).Order());
-        Assert.All(savedImage.Resolutions, x => Assert.Equal("image/jpeg", x.MediaAsset!.ContentType));
+        Assert.All(savedImage.Resolutions, x => Assert.Equal(MediaContentType.Jpeg, x.MediaAsset!.ContentType));
 
         var savedVideo = await db.Videos.Include(x => x.Resolutions).ThenInclude(x => x.MediaAsset)
             .Include(x => x.Thumbnail).ThenInclude(x => x!.Resolutions).ThenInclude(x => x.MediaAsset)
             .SingleAsync(x => x.Id == video.Id);
         Assert.Equal([720, 1080], savedVideo.Resolutions.Select(x => x.Height).Order().ToArray());
-        Assert.All(savedVideo.Resolutions, x => Assert.Equal("video/mp4", x.MediaAsset!.ContentType));
+        Assert.All(savedVideo.Resolutions, x => Assert.Equal(MediaContentType.Mp4, x.MediaAsset!.ContentType));
         var thumbnail = Assert.IsType<Image>(savedVideo.Thumbnail);
         Assert.Equal(video.Thumbnail!.Id, thumbnail.Id);
         Assert.Equal(thumbnail.Id, savedVideo.ThumbnailImageId);
         Assert.Equal(2, thumbnail.Resolutions.Count);
-        Assert.All(thumbnail.Resolutions, x => Assert.Equal("image/jpeg", x.MediaAsset!.ContentType));
+        Assert.All(thumbnail.Resolutions, x => Assert.Equal(MediaContentType.Jpeg, x.MediaAsset!.ContentType));
 
         var videoResolution = savedVideo.Resolutions.First();
         db.ChangeTracker.Clear();

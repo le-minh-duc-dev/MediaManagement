@@ -83,7 +83,7 @@ public class CustomPolicyTests
             UploadSessionId = session.Id,
             FileName = PrivateContent,
             ObjectKey = PrivateContent,
-            ContentType = "image/png",
+            ContentType = MediaContentType.Png,
             SizeBytes = 1024,
             UploadSession = session,
         };
@@ -152,7 +152,7 @@ public class CustomPolicyTests
         var sink = new CapturingSink();
         using var logger = new LoggerConfiguration()
             .Destructure.With<CustomPolicy>()
-            .Destructure.ToMaximumStringLength(16)
+            .Destructure.ToMaximumStringLength(5)
             .WriteTo.Sink(sink)
             .CreateLogger();
         logger.Information(
@@ -161,7 +161,7 @@ public class CustomPolicyTests
             {
                 FileName = PrivateContent,
                 ObjectKey = PrivateContent,
-                ContentType = new string('x', 100),
+                ContentType = MediaContentType.Png,
             }
         );
 
@@ -171,7 +171,8 @@ public class CustomPolicyTests
         var contentType = Assert.IsType<string>(
             Assert.IsType<ScalarValue>(properties.Single(p => p.Name == "ContentType").Value).Value
         );
-        Assert.True(contentType.Length <= 16);
+        Assert.True(contentType.Length <= 5);
+        Assert.NotEqual("image/png", contentType);
     }
 
     private sealed class CapturingSink : ILogEventSink

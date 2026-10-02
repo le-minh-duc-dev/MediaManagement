@@ -51,6 +51,21 @@ namespace MediaManagement.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Images",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Images", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Posts",
                 columns: table => new
                 {
@@ -211,6 +226,51 @@ namespace MediaManagement.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserProfiles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    AvatarImageId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserProfiles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserProfiles_Images_AvatarImageId",
+                        column: x => x.AvatarImageId,
+                        principalTable: "Images",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Videos",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ThumbnailImageId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Videos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Videos_Images_ThumbnailImageId",
+                        column: x => x.ThumbnailImageId,
+                        principalTable: "Images",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PostTag",
                 columns: table => new
                 {
@@ -242,7 +302,7 @@ namespace MediaManagement.Migrations
                     UploadSessionId = table.Column<Guid>(type: "TEXT", nullable: false),
                     ObjectKey = table.Column<string>(type: "TEXT", nullable: false),
                     FileName = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
-                    ContentType = table.Column<string>(type: "TEXT", maxLength: 127, nullable: false),
+                    ContentType = table.Column<int>(type: "INTEGER", nullable: false),
                     SizeBytes = table.Column<long>(type: "INTEGER", nullable: false),
                     UploadedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
@@ -259,6 +319,35 @@ namespace MediaManagement.Migrations
                         principalTable: "UploadSessions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ImageResolutions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ImageId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MediaAssetId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ImageResolutions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ImageResolutions_Images_ImageId",
+                        column: x => x.ImageId,
+                        principalTable: "Images",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ImageResolutions_MediaAssets_MediaAssetId",
+                        column: x => x.MediaAssetId,
+                        principalTable: "MediaAssets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -288,6 +377,37 @@ namespace MediaManagement.Migrations
                         name: "FK_PostItem_Posts_PostId",
                         column: x => x.PostId,
                         principalTable: "Posts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "VideoResolutions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    VideoId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MediaAssetId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Width = table.Column<int>(type: "INTEGER", nullable: false),
+                    Height = table.Column<int>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
+                    CreatedBy = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UpdatedBy = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VideoResolutions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VideoResolutions_MediaAssets_MediaAssetId",
+                        column: x => x.MediaAssetId,
+                        principalTable: "MediaAssets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_VideoResolutions_Videos_VideoId",
+                        column: x => x.VideoId,
+                        principalTable: "Videos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -330,6 +450,16 @@ namespace MediaManagement.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_ImageResolutions_ImageId",
+                table: "ImageResolutions",
+                column: "ImageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ImageResolutions_MediaAssetId",
+                table: "ImageResolutions",
+                column: "MediaAssetId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MediaAssets_ObjectKey",
                 table: "MediaAssets",
                 column: "ObjectKey",
@@ -364,6 +494,28 @@ namespace MediaManagement.Migrations
                 name: "IX_UploadSessions_CleanedUpAt_NextCleanupAt",
                 table: "UploadSessions",
                 columns: new[] { "CleanedUpAt", "NextCleanupAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserProfiles_AvatarImageId",
+                table: "UserProfiles",
+                column: "AvatarImageId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoResolutions_MediaAssetId",
+                table: "VideoResolutions",
+                column: "MediaAssetId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoResolutions_VideoId",
+                table: "VideoResolutions",
+                column: "VideoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Videos_ThumbnailImageId",
+                table: "Videos",
+                column: "ThumbnailImageId",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -385,10 +537,19 @@ namespace MediaManagement.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "ImageResolutions");
+
+            migrationBuilder.DropTable(
                 name: "PostItem");
 
             migrationBuilder.DropTable(
                 name: "PostTag");
+
+            migrationBuilder.DropTable(
+                name: "UserProfiles");
+
+            migrationBuilder.DropTable(
+                name: "VideoResolutions");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
@@ -397,16 +558,22 @@ namespace MediaManagement.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
-                name: "MediaAssets");
-
-            migrationBuilder.DropTable(
                 name: "Posts");
 
             migrationBuilder.DropTable(
                 name: "Tag");
 
             migrationBuilder.DropTable(
+                name: "MediaAssets");
+
+            migrationBuilder.DropTable(
+                name: "Videos");
+
+            migrationBuilder.DropTable(
                 name: "UploadSessions");
+
+            migrationBuilder.DropTable(
+                name: "Images");
         }
     }
 }

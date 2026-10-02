@@ -79,10 +79,8 @@ namespace MediaManagement.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(127)
-                        .HasColumnType("TEXT");
+                    b.Property<int>("ContentType")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");

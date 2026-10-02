@@ -1,5 +1,6 @@
 using System.Text.Json;
 using MediaManagement.Contracts.Uploads;
+using MediaManagement.Entities;
 using MediaManagement.Models;
 using Microsoft.Extensions.Options;
 
