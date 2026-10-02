@@ -16,7 +16,7 @@ public sealed class PostMigrationTests
         await connection.OpenAsync();
         await using var db = new MediaManagementContext(new DbContextOptionsBuilder<MediaManagementContext>().UseSqlite(connection).Options);
         var migrator = db.GetService<IMigrator>();
-        const string initial = "20260927085036_InitialMediaSchema";
+        const string initial = "20261001150151_initApp";
         await migrator.MigrateAsync(initial);
         DateTimeOffset[] timestamps = [
             new DateTimeOffset(2026, 9, 27, 11, 22, 33, TimeSpan.FromHours(7)).AddTicks(9999999),
@@ -28,10 +28,10 @@ public sealed class PostMigrationTests
         {
             Guid id = Guid.NewGuid();
             ids.Add(id);
-            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Posts (Id, OwnerId, CreatedAt) VALUES ({id}, {Guid.NewGuid()}, {timestamp})");
+            await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Posts (Id, CreatedBy, CreatedAt) VALUES ({id}, {Guid.NewGuid()}, {timestamp.UtcTicks})");
         }
         Guid tagId = Guid.NewGuid();
-        await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Tag (Id, Name) VALUES ({tagId}, {"existing"})");
+        await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Tag (Id, Name, CreatedAt, CreatedBy) VALUES ({tagId}, {"existing"}, {timestamps[0]}, {Guid.NewGuid()})");
         await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO PostTag (PostsId, TagsId) VALUES ({ids[0]}, {tagId})");
         await migrator.MigrateAsync();
         for (int index = 0; index < ids.Count; index++)
@@ -45,6 +45,6 @@ public sealed class PostMigrationTests
         await using var command = connection.CreateCommand();
         command.CommandText = "SELECT CreatedAt FROM Posts WHERE Id = $id";
         command.Parameters.AddWithValue("$id", ids[0]);
-        Assert.Equal(timestamps[0].UtcTicks, DateTimeOffset.Parse((string)(await command.ExecuteScalarAsync())!).UtcTicks);
+        Assert.Equal(timestamps[0].UtcTicks, Assert.IsType<long>(await command.ExecuteScalarAsync()));
     }
 }

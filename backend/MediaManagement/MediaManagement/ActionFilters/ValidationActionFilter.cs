@@ -1,12 +1,16 @@
 using FluentValidation;
+using FluentValidation.Results;
 using MediaManagement.Contracts;
+using MediaManagement.Contracts.ErrorCodes;
 using MediaManagement.Models.Results;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Options;
 
 namespace MediaManagement.ActionFilters;
 
-public sealed class ValidationActionFilter : IAsyncActionFilter
+public sealed class ValidationActionFilter(IOptions<JsonOptions> jsonOptions) : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(
         ActionExecutingContext context,
@@ -39,8 +43,13 @@ public sealed class ValidationActionFilter : IAsyncActionFilter
 
                 errors.AddRange(
                     result.Errors.Select(failure => new Error(
-                        failure.ErrorMessage,
-                        failure.PropertyName
+                        LocalizableCode(failure.ErrorCode),
+                        JsonFieldPath.Normalize(
+                            failure.PropertyName,
+                            parameter.ParameterType,
+                            jsonOptions.Value.JsonSerializerOptions
+                        ),
+                        Parameters(failure)
                     ))
                 );
             }
@@ -56,5 +65,33 @@ public sealed class ValidationActionFilter : IAsyncActionFilter
             return;
         }
         await next();
+    }
+
+    private static string LocalizableCode(string code) =>
+        !string.IsNullOrWhiteSpace(code)
+        && code.Any(c => c is '.' or ':')
+        && code.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or ':' or '_')
+            ? code
+            : ValidationErrorCodes.InvalidValue;
+
+    private static ErrorParameters Parameters(ValidationFailure failure)
+    {
+        if (failure.CustomState is ErrorParameters explicitParameters)
+        {
+            return explicitParameters;
+        }
+
+        Dictionary<string, object?> parameters = [];
+        // Rule limits are safe localization arguments; attempted values and arbitrary state are not.
+        foreach (var (placeholder, name) in new[]
+            { ("MaxLength", "maxLength"), ("MinLength", "minLength") })
+        {
+            if (failure.FormattedMessagePlaceholderValues?.TryGetValue(placeholder, out var limit) == true
+                && limit is int)
+            {
+                parameters[name] = limit;
+            }
+        }
+        return new ErrorParameters(parameters);
     }
 }

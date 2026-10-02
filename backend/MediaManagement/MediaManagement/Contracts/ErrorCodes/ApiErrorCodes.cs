@@ -1,4 +1,4 @@
-﻿namespace MediaManagement.Contracts;
+﻿namespace MediaManagement.Contracts.ErrorCodes;
 
 public static class ApiErrorCodes
 {

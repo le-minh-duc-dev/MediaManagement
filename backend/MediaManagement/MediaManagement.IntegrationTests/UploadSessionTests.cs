@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using Microsoft.AspNetCore.DataProtection;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -62,7 +63,7 @@ public sealed class UploadSessionTests : IAsyncLifetime
             {
                 Assert.Equal("PUT", x.Method);
                 Assert.Equal("*", x.Headers["If-None-Match"]);
-                Assert.Equal(x.ContentType, x.Headers["Content-Type"]);
+                Assert.Equal(x.ContentType.ToMimeType(), x.Headers["Content-Type"]);
                 Assert.Equal(factory.Clock.GetUtcNow().AddMinutes(15), x.UrlExpiresAt);
             }
         );
@@ -330,8 +331,8 @@ public sealed class UploadSessionTests : IAsyncLifetime
         var response = await client.PostAsJsonAsync(
             Route,
             new CreateUploadSessionRequest([
-                new("photo.jpg", 10, "image/jpeg"),
-                new("photo.jpg", 20, "image/jpeg"),
+                new("photo.jpg", 10, MediaContentType.Jpeg),
+                new("photo.jpg", 20, MediaContentType.Jpeg),
             ])
         );
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -348,7 +349,7 @@ public sealed class UploadSessionTests : IAsyncLifetime
             .MediaAssets.Where(x => x.Id == target.MediaAssetId)
             .Select(x => x.ObjectKey)
             .SingleAsync();
-        factory.Storage.Objects[key] = new(size ?? target.SizeBytes, type ?? target.ContentType);
+        factory.Storage.Objects[key] = new(size ?? target.SizeBytes, type ?? target.ContentType.ToMimeType());
     }
 
     private async Task CleanupAsync()
@@ -388,6 +389,7 @@ internal sealed class UploadFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
         builder.ConfigureServices(services =>
         {
+            services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<DbContextOptions<MediaManagementContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<MediaManagementContext>>();
             services.AddDbContext<MediaManagementContext>(options => options.UseSqlite(connection));

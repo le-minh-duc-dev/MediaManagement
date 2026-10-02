@@ -1,4 +1,5 @@
 using FluentValidation;
+using MediaManagement.Contracts.ErrorCodes;
 using MediaManagement.Entities;
 using MediaManagement.Models;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,8 @@ public sealed class UploadItemValidator : AbstractValidator<UploadItemRequest>
             .InclusiveBetween(1, options.Value.MaxFileSizeBytes)
             .WithErrorCode(ValidationErrorCodes.InvalidValue);
         RuleFor(x => x.ContentType)
-            .Must(x => options.Value.AllowedContentTypes.Contains(x, StringComparer.Ordinal))
+            .Must(x => Enum.IsDefined(x)
+                && options.Value.AllowedContentTypes.Contains(x.ToMimeType(), StringComparer.Ordinal))
             .WithErrorCode(ValidationErrorCodes.InvalidValue);
     }
 }

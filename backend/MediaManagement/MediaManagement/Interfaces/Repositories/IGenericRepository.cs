@@ -26,6 +26,8 @@ public interface IGenericRepository<T>
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    // Returns false on a concurrency conflict and discards tracked changes before a fresh read.
-    Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default
+    );
 }

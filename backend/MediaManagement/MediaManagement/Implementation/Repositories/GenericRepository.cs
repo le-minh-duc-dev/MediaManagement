@@ -26,7 +26,7 @@ public abstract class GenericRepository<T>(MediaManagementContext context) : IGe
         CancellationToken cancellationToken = default
     )
     {
-        IQueryable<T> query = _context.Set<T>().AsQueryable();
+        var query = _context.Set<T>().AsQueryable();
 
         if (specification != null)
         {
@@ -46,7 +46,7 @@ public abstract class GenericRepository<T>(MediaManagementContext context) : IGe
         CancellationToken cancellationToken = default
     )
     {
-        IQueryable<T> query = _context.Set<T>().AsQueryable();
+        var query = _context.Set<T>().AsQueryable();
 
         if (asNoTracking)
         {
@@ -68,7 +68,7 @@ public abstract class GenericRepository<T>(MediaManagementContext context) : IGe
         CancellationToken cancellationToken = default
     )
     {
-        IQueryable<T> query = _context.Set<T>().Where(e => EF.Property<Guid>(e, "Id") == id);
+        var query = _context.Set<T>().Where(e => EF.Property<Guid>(e, "Id") == id);
         if (asNoTracking)
         {
             query = query.AsNoTracking();
@@ -97,23 +97,40 @@ public abstract class GenericRepository<T>(MediaManagementContext context) : IGe
         return _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default
+    )
     {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            cancellationToken
+        );
+
         try
         {
-            await SaveChangesAsync(cancellationToken);
-            return true;
+            var result = await operation(cancellationToken);
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+
+            return result;
         }
-        catch (DbUpdateConcurrencyException)
+        catch
         {
+            await transaction.RollbackAsync(CancellationToken.None);
+
             _context.ChangeTracker.Clear();
-            return false;
+
+            throw;
         }
     }
 
     public static IQueryable<T> GetQuery(IQueryable<T> inputQuery, ISpecification<T> spec)
     {
-        IQueryable<T> query = inputQuery;
+        var query = inputQuery;
         if (spec.Criteria != null)
         {
             query = query.Where(spec.Criteria);

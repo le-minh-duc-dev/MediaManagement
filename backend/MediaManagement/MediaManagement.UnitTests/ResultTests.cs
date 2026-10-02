@@ -1,4 +1,5 @@
 using MediaManagement.Contracts;
+using MediaManagement.Contracts.ErrorCodes;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ public class ResultTests
         Assert.True(Result.Success().IsSuccess);
         Assert.Empty(Result.Success().Errors);
         Assert.Equal(42, Result<int>.Success(42).Value);
-        Assert.Null(Result<string?>.Success(null).Value);
+        Assert.Throws<ArgumentNullException>(() => Result<string?>.Success(null));
         Assert.Throws<ArgumentException>(() => Result.Failure(ErrorType.Validation));
         Assert.Throws<ArgumentException>(() => Result<int>.Failure(ErrorType.Validation));
         Assert.Throws<ArgumentException>(() => Result.Failure(ErrorType.Validation, [null!]));
@@ -31,13 +32,13 @@ public class ResultTests
     }
 
     [Theory]
-    [InlineData(ErrorType.Validation, 400, "validation.failed")]
-    [InlineData(ErrorType.BadRequest, 400, "request.invalid")]
-    [InlineData(ErrorType.Unauthorized, 401, "auth.unauthorized")]
-    [InlineData(ErrorType.Forbidden, 403, "auth.forbidden")]
-    [InlineData(ErrorType.NotFound, 404, "resource.not_found")]
-    [InlineData(ErrorType.Conflict, 409, "resource.conflict")]
-    [InlineData(ErrorType.Unexpected, 500, "server.unexpected")]
+    [InlineData(ErrorType.Validation, 400, ApiErrorCodes.Validation)]
+    [InlineData(ErrorType.BadRequest, 400, ApiErrorCodes.BadRequest)]
+    [InlineData(ErrorType.Unauthorized, 401, ApiErrorCodes.Unauthorized)]
+    [InlineData(ErrorType.Forbidden, 403, ApiErrorCodes.Forbidden)]
+    [InlineData(ErrorType.NotFound, 404, ApiErrorCodes.NotFound)]
+    [InlineData(ErrorType.Conflict, 409, ApiErrorCodes.Conflict)]
+    [InlineData(ErrorType.Unexpected, 500, ApiErrorCodes.Unexpected)]
     public void All_helpers_use_the_same_failure_contract(
         ErrorType category,
         int status,

@@ -10,6 +10,11 @@ public sealed class MediaManagementContext(DbContextOptions<MediaManagementConte
     public DbSet<Post> Posts { get; set; }
     public DbSet<UploadSession> UploadSessions { get; set; }
     public DbSet<MediaAsset> MediaAssets { get; set; }
+    public DbSet<Image> Images { get; set; }
+    public DbSet<ImageResolution> ImageResolutions { get; set; }
+    public DbSet<Video> Videos { get; set; }
+    public DbSet<VideoResolution> VideoResolutions { get; set; }
+    public DbSet<UserProfile> UserProfiles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +54,44 @@ public sealed class MediaManagementContext(DbContextOptions<MediaManagementConte
             .HasOne(x => x.MediaAsset)
             .WithMany()
             .HasForeignKey(x => x.MediaAssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder
+            .Entity<Video>()
+            .HasOne(x => x.Thumbnail)
+            .WithOne()
+            .HasForeignKey<Video>(x => x.ThumbnailImageId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder
+            .Entity<Image>()
+            .HasMany(x => x.Resolutions)
+            .WithOne(x => x.Image)
+            .HasForeignKey(x => x.ImageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<Video>()
+            .HasMany(x => x.Resolutions)
+            .WithOne(x => x.Video)
+            .HasForeignKey(x => x.VideoId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<ImageResolution>()
+            .HasOne(x => x.MediaAsset)
+            .WithMany()
+            .HasForeignKey(x => x.MediaAssetId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<VideoResolution>()
+            .HasOne(x => x.MediaAsset)
+            .WithMany()
+            .HasForeignKey(x => x.MediaAssetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<UserProfile>()
+            .HasOne(user => user.Avatar)
+            .WithOne()
+            .HasForeignKey<UserProfile>(user => user.AvatarImageId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

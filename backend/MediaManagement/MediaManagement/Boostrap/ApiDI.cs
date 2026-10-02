@@ -2,12 +2,16 @@
 using Asp.Versioning;
 using MediaManagement.ActionFilters;
 using MediaManagement.Contracts;
+using MediaManagement.Contracts.ErrorCodes;
+using MediaManagement.Models.Results;
 using MediaManagement.Database;
 using MediaManagement.ExceptionHandlers;
 using MediaManagement.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace MediaManagement.Boostrap;
 
@@ -23,6 +27,17 @@ public static class ApiDI
     {
         services.AddScoped<ValidationActionFilter>();
         services.AddControllers(options => options.Filters.AddService<ValidationActionFilter>());
+        services.Configure<ApiBehaviorOptions>(options =>
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var jsonOptions = context.HttpContext.RequestServices
+                    .GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+                var errors = context.ModelState
+                    .Where(entry => entry.Value?.Errors.Count > 0)
+                    .Select(entry => new Error(ApiErrorCodes.BadRequest,
+                        JsonFieldPath.Normalize(entry.Key, null, jsonOptions)));
+                return ApiProblems.ToActionResult(context.HttpContext, ErrorType.BadRequest, errors);
+            });
 
         services.AddProblemDetails(options =>
             options.CustomizeProblemDetails = context =>

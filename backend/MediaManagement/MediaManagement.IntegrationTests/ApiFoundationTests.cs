@@ -6,8 +6,10 @@ using System.Text.Json.Serialization;
 using Asp.Versioning;
 using FluentValidation;
 using MediaManagement.Contracts;
+using MediaManagement.Contracts.ErrorCodes;
 using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -69,16 +71,16 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
         };
         request.Headers.Add("X-Correlation-Id", "test-correlation");
         var response = await client.SendAsync(request);
-        var problem = await Problem(response, 400, "validation.failed");
+        var problem = await Problem(response, 400, ApiErrorCodes.Validation);
         var errors = problem.GetProperty("errors").EnumerateArray().ToArray();
         var title = Assert.Single(errors, e => e.GetProperty("field").GetString() == "title");
-        Assert.Equal("validation.max_length", title.GetProperty("code").GetString());
+        Assert.Equal(ValidationErrorCodes.InvalidMaximumLength, title.GetProperty("code").GetString());
         Assert.Equal(10, title.GetProperty("parameters").GetProperty("maxLength").GetInt32());
         Assert.Contains(
             errors,
             e =>
                 e.GetProperty("field").GetString() == "items[0].label"
-                && e.GetProperty("code").GetString() == "validation.required"
+                && e.GetProperty("code").GetString() == ValidationErrorCodes.Required
         );
         Assert.Equal("test-correlation", problem.GetProperty("correlationId").GetString());
         Assert.Equal(
@@ -97,16 +99,16 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
             "/foundation",
             new { title = "reserved", items = Array.Empty<object>() }
         );
-        var problem = await Problem(response, 400, "validation.failed");
+        var problem = await Problem(response, 400, ApiErrorCodes.Validation);
         Assert.Contains(
             problem.GetProperty("errors").EnumerateArray(),
             e => e.GetProperty("code").GetString() == "post.title.reserved"
         );
 
         response = await client.PostAsJsonAsync("/foundation/fallback", new { title = "" });
-        problem = await Problem(response, 400, "validation.failed");
+        problem = await Problem(response, 400, ApiErrorCodes.Validation);
         var error = Assert.Single(problem.GetProperty("errors").EnumerateArray());
-        Assert.Equal("validation.invalid", error.GetProperty("code").GetString());
+        Assert.Equal(ValidationErrorCodes.InvalidValue, error.GetProperty("code").GetString());
         Assert.Empty(error.GetProperty("parameters").EnumerateObject());
         Assert.DoesNotContain("PRIVATE", problem.GetRawText());
     }
@@ -126,10 +128,10 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
             "/foundation",
             new StringContent(json, Encoding.UTF8, contentType)
         );
-        var problem = await Problem(response, 400, "request.invalid");
+        var problem = await Problem(response, 400, ApiErrorCodes.BadRequest);
         Assert.All(
             problem.GetProperty("errors").EnumerateArray(),
-            e => Assert.Equal("request.invalid", e.GetProperty("code").GetString())
+            e => Assert.Equal(ApiErrorCodes.BadRequest, e.GetProperty("code").GetString())
         );
         Assert.False(problem.TryGetProperty("detail", out _));
         Assert.Equal(before, factory.Services.GetRequiredService<TestApplicationService>().Calls);
@@ -146,14 +148,14 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
                 "application/json"
             )
         );
-        var problem = await Problem(response, 400, "request.invalid");
+        var problem = await Problem(response, 400, ApiErrorCodes.BadRequest);
         Assert.Contains(
             problem.GetProperty("errors").EnumerateArray(),
             e => e.GetProperty("field").GetString() == "items[0].label"
         );
 
         response = await client.GetAsync("/foundation/query?count=PRIVATE");
-        problem = await Problem(response, 400, "request.invalid");
+        problem = await Problem(response, 400, ApiErrorCodes.BadRequest);
         Assert.Equal("count", problem.GetProperty("errors")[0].GetProperty("field").GetString());
     }
 
@@ -178,13 +180,13 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
     }
 
     [Theory]
-    [InlineData(ErrorType.Validation, 400, "validation.failed")]
-    [InlineData(ErrorType.BadRequest, 400, "request.invalid")]
-    [InlineData(ErrorType.Unauthorized, 401, "auth.unauthorized")]
-    [InlineData(ErrorType.Forbidden, 403, "auth.forbidden")]
-    [InlineData(ErrorType.NotFound, 404, "resource.not_found")]
-    [InlineData(ErrorType.Conflict, 409, "resource.conflict")]
-    [InlineData(ErrorType.Unexpected, 500, "server.unexpected")]
+    [InlineData(ErrorType.Validation, 400, ApiErrorCodes.Validation)]
+    [InlineData(ErrorType.BadRequest, 400, ApiErrorCodes.BadRequest)]
+    [InlineData(ErrorType.Unauthorized, 401, ApiErrorCodes.Unauthorized)]
+    [InlineData(ErrorType.Forbidden, 403, ApiErrorCodes.Forbidden)]
+    [InlineData(ErrorType.NotFound, 404, ApiErrorCodes.NotFound)]
+    [InlineData(ErrorType.Conflict, 409, ApiErrorCodes.Conflict)]
+    [InlineData(ErrorType.Unexpected, 500, ApiErrorCodes.Unexpected)]
     public async Task Business_failures_are_serialized_consistently(
         ErrorType type,
         int status,
@@ -213,15 +215,15 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
             new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") }
         );
         var response = await http.GetAsync("/foundation/throw");
-        var problem = await Problem(response, 500, "server.unexpected");
+        var problem = await Problem(response, 500, ApiErrorCodes.Unexpected);
         Assert.DoesNotContain("PRIVATE", problem.GetRawText());
         Assert.DoesNotContain("stack", problem.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
-    [InlineData("/missing-endpoint", 404, "resource.not_found")]
-    [InlineData("/foundation/empty-error", 404, "resource.not_found")]
-    [InlineData("/foundation/query?count=PRIVATE", 400, "request.invalid")]
+    [InlineData("/missing-endpoint", 404, ApiErrorCodes.NotFound)]
+    [InlineData("/foundation/empty-error", 404, ApiErrorCodes.NotFound)]
+    [InlineData("/foundation/query?count=PRIVATE", 400, ApiErrorCodes.BadRequest)]
     public async Task Framework_and_empty_errors_follow_the_contract(
         string url,
         int status,
@@ -237,12 +239,12 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
         await Problem(
             await client.PostAsync("/foundation", new StringContent("PRIVATE")),
             415,
-            "request.unsupported_media_type"
+            ApiErrorCodes.UnsupportedMediaType
         );
         await Problem(
             await client.PutAsJsonAsync("/foundation/7", new { }),
             405,
-            "request.method_not_allowed"
+            ApiErrorCodes.MethodNotAllowed
         );
     }
 
@@ -251,7 +253,7 @@ public class ApiFoundationTests : IClassFixture<ApiFactory>
     {
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/foundation/limited")).StatusCode);
         var response = await client.GetAsync("/foundation/limited");
-        await Problem(response, 429, "rate_limit.exceeded");
+        await Problem(response, 429, ApiErrorCodes.RateLimitExceeded);
         Assert.True(response.Headers.RetryAfter?.Delta > TimeSpan.Zero);
     }
 
@@ -287,6 +289,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment(environment);
         builder.ConfigureServices(services =>
         {
+            services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.AddControllers().AddApplicationPart(typeof(FoundationController).Assembly);
             services.AddSingleton<TestApplicationService>();
             services.AddValidatorsFromAssemblyContaining<CreateRequestValidator>();
@@ -376,8 +379,8 @@ public sealed class CreateRequestValidator : AbstractValidator<CreateRequest>
 {
     public CreateRequestValidator()
     {
-        RuleFor(x => x.Title).NotEmpty().WithErrorCode("validation.required");
-        RuleFor(x => x.Title).MaximumLength(10).WithErrorCode("validation.max_length");
+        RuleFor(x => x.Title).NotEmpty().WithErrorCode(ValidationErrorCodes.Required);
+        RuleFor(x => x.Title).MaximumLength(10).WithErrorCode(ValidationErrorCodes.InvalidMaximumLength);
 
         RuleFor(x => x.Title)
             .MustAsync(
@@ -395,7 +398,7 @@ public sealed class CreateRequestValidator : AbstractValidator<CreateRequest>
 public sealed class ItemRequestValidator : AbstractValidator<ItemRequest>
 {
     public ItemRequestValidator() =>
-        RuleFor(x => x.DisplayName).NotEmpty().WithErrorCode("validation.required");
+        RuleFor(x => x.DisplayName).NotEmpty().WithErrorCode(ValidationErrorCodes.Required);
 }
 
 public sealed class FallbackRequestValidator : AbstractValidator<FallbackRequest>

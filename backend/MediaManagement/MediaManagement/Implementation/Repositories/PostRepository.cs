@@ -39,7 +39,7 @@ public sealed class PostRepository(MediaManagementContext context)
         CancellationToken cancellationToken
     )
     {
-        var query = _context.Posts.AsNoTracking().Where(x => x.OwnerId == ownerId);
+        var query = _context.Posts.AsNoTracking().Where(x => x.CreatedBy == ownerId);
         var count = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderByDescending(x => x.CreatedAt)

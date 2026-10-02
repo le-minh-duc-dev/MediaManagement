@@ -25,7 +25,7 @@ public sealed class PostsController(IPostService service) : ControllerBase
         return result.ToCreatedAtAction(
             this,
             nameof(GetOwnAsync),
-            $"{Request.Path}/{result.Value.Id}"
+            result.IsSuccess ? new { id = result.Value.Id } : null
         );
     }
 
@@ -36,6 +36,7 @@ public sealed class PostsController(IPostService service) : ControllerBase
     ) => (await service.GetPageOwnAsync(request, cancellationToken)).ToOk(this);
 
     [HttpGet("{id:guid}")]
+    [ActionName(nameof(GetOwnAsync))]
     public async Task<ActionResult<PostDetails>> GetOwnAsync(
         Guid id,
         CancellationToken cancellationToken

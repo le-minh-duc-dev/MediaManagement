@@ -47,7 +47,7 @@ public sealed class UploadSessionService(
                     UploadSessionId = session.Id,
                     ObjectKey = CreateObjectKey(session.Id, id),
                     FileName = item.FileName,
-                    ContentType = item.ContentType,
+                    ContentType = item.ContentType.ToMimeType(),
                     SizeBytes = item.SizeBytes,
                     CreatedAt = now,
                 }
@@ -72,7 +72,7 @@ public sealed class UploadSessionService(
                     asset.Id,
                     asset.FileName,
                     asset.SizeBytes,
-                    asset.ContentType,
+                    asset.ContentType.ToMediaContentType(),
                     signed.Url,
                     "PUT",
                     signed.Headers,
@@ -178,6 +178,7 @@ public sealed class UploadSessionService(
         session.Status = ids.Count > 0 ? UploadSessionStatus.Completed : UploadSessionStatus.Failed;
         session.CompletedAt = now;
         session.Revision = CreateNewGuid();
+
         if (!await repository.TrySaveChangesAsync(cancellationToken))
         {
             var current = await GetSessionForOwnerAsync(createdBy, id, cancellationToken);
@@ -209,7 +210,7 @@ public sealed class UploadSessionService(
                         x.Id,
                         x.FileName,
                         x.SizeBytes,
-                        x.ContentType,
+                        x.ContentType.ToMediaContentType(),
                         x.UploadedAt is not null
                     )),
             ]

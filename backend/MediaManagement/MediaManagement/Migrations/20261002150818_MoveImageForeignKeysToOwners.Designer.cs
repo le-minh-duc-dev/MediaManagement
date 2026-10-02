@@ -3,6 +3,7 @@ using System;
 using MediaManagement.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MediaManagement.Migrations
 {
     [DbContext(typeof(MediaManagementContext))]
-    partial class MediaManagementContextModelSnapshot : ModelSnapshot
+    [Migration("20261002150818_MoveImageForeignKeysToOwners")]
+    partial class MoveImageForeignKeysToOwners
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -52,6 +55,9 @@ namespace MediaManagement.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Height")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("ImageId")
                         .HasColumnType("TEXT");
 
@@ -63,6 +69,9 @@ namespace MediaManagement.Migrations
 
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -584,7 +593,7 @@ namespace MediaManagement.Migrations
                     b.HasOne("MediaManagement.Entities.MediaAsset", "MediaAsset")
                         .WithMany()
                         .HasForeignKey("MediaAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Image");
@@ -647,7 +656,7 @@ namespace MediaManagement.Migrations
                     b.HasOne("MediaManagement.Entities.MediaAsset", "MediaAsset")
                         .WithMany()
                         .HasForeignKey("MediaAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("MediaManagement.Entities.Video", "Video")

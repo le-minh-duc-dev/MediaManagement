@@ -2,7 +2,7 @@ namespace MediaManagement.Contracts.Uploads;
 
 public sealed record CreateUploadSessionRequest(List<UploadItemRequest> Items);
 
-public sealed record UploadItemRequest(string FileName, long SizeBytes, string ContentType);
+public sealed record UploadItemRequest(string FileName, long SizeBytes, MediaContentType ContentType);
 
 public sealed record CompleteUploadSessionRequest(List<Guid> UploadedMediaAssetIds);
 
@@ -10,7 +10,7 @@ public sealed record UploadTarget(
     Guid MediaAssetId,
     string FileName,
     long SizeBytes,
-    string ContentType,
+    MediaContentType ContentType,
     string UploadUrl,
     string Method,
     IReadOnlyDictionary<string, string> Headers,
@@ -35,13 +35,13 @@ public sealed record UploadAssetDetails(
     Guid MediaAssetId,
     string FileName,
     long SizeBytes,
-    string ContentType,
+    MediaContentType ContentType,
     bool Uploaded
 );
 
 public sealed record MediaAssetDetails(
     Guid MediaAssetId,
     string FileName,
-    string ContentType,
+    MediaContentType ContentType,
     string Url
 );

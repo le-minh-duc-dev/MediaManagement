@@ -3,6 +3,7 @@ using System;
 using MediaManagement.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MediaManagement.Migrations
 {
     [DbContext(typeof(MediaManagementContext))]
-    partial class MediaManagementContextModelSnapshot : ModelSnapshot
+    [Migration("20261001155459_AddImagesAndVideos")]
+    partial class AddImagesAndVideos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
@@ -35,7 +38,12 @@ namespace MediaManagement.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("VideoId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("VideoId");
 
                     b.ToTable("Images");
                 });
@@ -52,6 +60,9 @@ namespace MediaManagement.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Height")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("ImageId")
                         .HasColumnType("TEXT");
 
@@ -63,6 +74,9 @@ namespace MediaManagement.Migrations
 
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -265,39 +279,6 @@ namespace MediaManagement.Migrations
                     b.ToTable("UploadSessions");
                 });
 
-            modelBuilder.Entity("MediaManagement.Entities.UserProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("AvatarImageId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AvatarImageId")
-                        .IsUnique();
-
-                    b.ToTable("UserProfiles");
-                });
-
             modelBuilder.Entity("MediaManagement.Entities.Video", b =>
                 {
                     b.Property<Guid>("Id")
@@ -310,9 +291,6 @@ namespace MediaManagement.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("ThumbnailImageId")
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -320,9 +298,6 @@ namespace MediaManagement.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ThumbnailImageId")
-                        .IsUnique();
 
                     b.ToTable("Videos");
                 });
@@ -573,6 +548,16 @@ namespace MediaManagement.Migrations
                     b.ToTable("PostTag");
                 });
 
+            modelBuilder.Entity("MediaManagement.Entities.Image", b =>
+                {
+                    b.HasOne("MediaManagement.Entities.Video", "Video")
+                        .WithMany("Thumbnails")
+                        .HasForeignKey("VideoId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Video");
+                });
+
             modelBuilder.Entity("MediaManagement.Entities.ImageResolution", b =>
                 {
                     b.HasOne("MediaManagement.Entities.Image", "Image")
@@ -584,7 +569,7 @@ namespace MediaManagement.Migrations
                     b.HasOne("MediaManagement.Entities.MediaAsset", "MediaAsset")
                         .WithMany()
                         .HasForeignKey("MediaAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Image");
@@ -622,32 +607,12 @@ namespace MediaManagement.Migrations
                     b.Navigation("Post");
                 });
 
-            modelBuilder.Entity("MediaManagement.Entities.UserProfile", b =>
-                {
-                    b.HasOne("MediaManagement.Entities.Image", "Avatar")
-                        .WithOne()
-                        .HasForeignKey("MediaManagement.Entities.UserProfile", "AvatarImageId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Avatar");
-                });
-
-            modelBuilder.Entity("MediaManagement.Entities.Video", b =>
-                {
-                    b.HasOne("MediaManagement.Entities.Image", "Thumbnail")
-                        .WithOne()
-                        .HasForeignKey("MediaManagement.Entities.Video", "ThumbnailImageId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Thumbnail");
-                });
-
             modelBuilder.Entity("MediaManagement.Entities.VideoResolution", b =>
                 {
                     b.HasOne("MediaManagement.Entities.MediaAsset", "MediaAsset")
                         .WithMany()
                         .HasForeignKey("MediaAssetId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("MediaManagement.Entities.Video", "Video")
@@ -745,6 +710,8 @@ namespace MediaManagement.Migrations
             modelBuilder.Entity("MediaManagement.Entities.Video", b =>
                 {
                     b.Navigation("Resolutions");
+
+                    b.Navigation("Thumbnails");
                 });
 #pragma warning restore 612, 618
         }
