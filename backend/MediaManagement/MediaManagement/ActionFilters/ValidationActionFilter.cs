@@ -1,97 +1,96 @@
 using FluentValidation;
 using FluentValidation.Results;
-using MediaManagement.Contracts;
-using MediaManagement.Contracts.ErrorCodes;
-using MediaManagement.Models.Results;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
 
 namespace MediaManagement.ActionFilters;
 
-public sealed class ValidationActionFilter(IOptions<JsonOptions> jsonOptions) : IAsyncActionFilter
+public sealed class ValidationActionFilter : IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(
         ActionExecutingContext context,
         ActionExecutionDelegate next
     )
     {
-        List<Error> errors = [];
+        var errors = new List<ValidationError>();
+
         foreach (var parameter in context.ActionDescriptor.Parameters)
         {
+            if (parameter.BindingInfo?.BindingSource == BindingSource.Services)
+            {
+                continue;
+            }
+
             if (
-                parameter.BindingInfo?.BindingSource == BindingSource.Services
-                || !context.ActionArguments.TryGetValue(parameter.Name, out var value)
-                || value is null
+                !context.ActionArguments.TryGetValue(parameter.Name, out var argument)
+                || argument is null
             )
             {
                 continue;
             }
 
             var validatorType = typeof(IValidator<>).MakeGenericType(parameter.ParameterType);
-            foreach (
-                var validator in context
-                    .HttpContext.RequestServices.GetServices(validatorType)
-                    .Cast<IValidator>()
-            )
+
+            var validators = context
+                .HttpContext.RequestServices.GetServices(validatorType)
+                .Cast<IValidator>();
+
+            foreach (var validator in validators)
             {
-                var result = await validator.ValidateAsync(
-                    new ValidationContext<object>(value),
+                var validationContext = new ValidationContext<object>(argument);
+
+                var validationResult = await validator.ValidateAsync(
+                    validationContext,
                     context.HttpContext.RequestAborted
                 );
 
-                errors.AddRange(
-                    result.Errors.Select(failure => new Error(
-                        LocalizableCode(failure.ErrorCode),
-                        JsonFieldPath.Normalize(
-                            failure.PropertyName,
-                            parameter.ParameterType,
-                            jsonOptions.Value.JsonSerializerOptions
-                        ),
-                        Parameters(failure)
-                    ))
-                );
+                errors.AddRange(validationResult.Errors.Select(MapValidationError));
             }
         }
 
         if (errors.Count > 0)
         {
-            context.Result = ApiProblems.ToActionResult(
-                context.HttpContext,
-                ErrorType.Validation,
-                errors
+            context.Result = new BadRequestObjectResult(
+                new ValidationProblemResponse
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    TraceId = context.HttpContext.TraceIdentifier,
+                    Errors = errors,
+                }
             );
+
             return;
         }
+
         await next();
     }
 
-    private static string LocalizableCode(string code) =>
-        !string.IsNullOrWhiteSpace(code)
-        && code.Any(c => c is '.' or ':')
-        && code.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or ':' or '_')
-            ? code
-            : ValidationErrorCodes.InvalidValue;
-
-    private static ErrorParameters Parameters(ValidationFailure failure)
+    private static ValidationError MapValidationError(ValidationFailure failure)
     {
-        if (failure.CustomState is ErrorParameters explicitParameters)
+        return new ValidationError
         {
-            return explicitParameters;
-        }
-
-        Dictionary<string, object?> parameters = [];
-        // Rule limits are safe localization arguments; attempted values and arbitrary state are not.
-        foreach (var (placeholder, name) in new[]
-            { ("MaxLength", "maxLength"), ("MinLength", "minLength") })
-        {
-            if (failure.FormattedMessagePlaceholderValues?.TryGetValue(placeholder, out var limit) == true
-                && limit is int)
-            {
-                parameters[name] = limit;
-            }
-        }
-        return new ErrorParameters(parameters);
+            Field = failure.PropertyName,
+            Code = failure.ErrorCode,
+            Message = failure.ErrorMessage,
+        };
     }
+}
+
+public sealed class ValidationProblemResponse
+{
+    public int Status { get; init; }
+
+    public string? TraceId { get; init; }
+
+    public IReadOnlyCollection<ValidationError> Errors { get; init; } = [];
+}
+
+public sealed class ValidationError
+{
+    public required string Field { get; init; }
+
+    public required string Code { get; init; }
+
+    public required string Message { get; init; }
 }
